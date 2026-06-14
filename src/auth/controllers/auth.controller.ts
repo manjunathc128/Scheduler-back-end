@@ -24,9 +24,9 @@ export class AuthController {
   ) {
     const result = await this.authService.register(registerDto);
 
-    this.setRefreshTokenCookie(reply, result.refreshToken);
+    // this.setRefreshTokenCookie(reply, result.refreshToken);
 
-    return { userId: result.userId, accessToken: result.accessToken };
+    return { userId: result.userId, accessToken: result.accessToken, refreshToken: result.refreshToken };
   }
 
   @Post('login')
@@ -39,9 +39,9 @@ export class AuthController {
     const device = (request.body as any)?.device || 'default';
     const result = await this.authService.login(loginDto, device);
 
-    this.setRefreshTokenCookie(reply, result.refreshToken);
+    // this.setRefreshTokenCookie(reply, result.refreshToken);
 
-    return { userId: result.userId, accessToken: result.accessToken };
+    return { userId: result.userId, accessToken: result.accessToken, refreshToken: result.refreshToken };
   }
 
   @Post('refresh')
@@ -71,7 +71,7 @@ export class AuthController {
 
     await this.authService.logout(userId, device, accessToken);
 
-    this.clearRefreshTokenCookie(reply);
+    // this.clearRefreshTokenCookie(reply);
 
     return { message: 'Logged out successfully' };
   }
