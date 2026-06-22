@@ -47,11 +47,10 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(
-    @Req() request: FastifyRequest,
+    @Body() body: { refreshToken: string; device?: string },
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
-    const refreshToken = request.cookies?.refresh_token!;
-    const device = (request.body as any)?.device || 'default';
+    const { refreshToken, device = 'default' } = body;
 
     const { accessToken } = await this.authService.refershToken(refreshToken, device);
 
