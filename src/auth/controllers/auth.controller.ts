@@ -88,10 +88,10 @@ export class AuthController {
     await this.authService.logoutAll(userId, accessToken);
 
     this.clearRefreshTokenCookie(reply);
-
+    console.log('here')
     return { message: 'Logged out from all devices' };
   }
-
+  
   private setRefreshTokenCookie(reply: FastifyReply, refreshToken: string): void {
     reply.setCookie('refresh_token', refreshToken, {
       httpOnly: true,

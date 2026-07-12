@@ -17,17 +17,17 @@ export class JobExecution {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ unique: true })
+  @Column({ type: 'varchar', length: 255, unique: true })
   executionId: string;
 
-  @Column()
+  @Column({ type: 'varchar', length: 255 })
   jobId: string;
 
   @ManyToOne(() => Job, { onDelete: 'CASCADE' })
-  @JoinColumn({ name: 'jobId' })
+  @JoinColumn({ name: 'jobId', referencedColumnName: 'jobId' })
   job: Job;
 
-  @Column()
+  @Column({ type: 'varchar', length: 255 })
   workerId: string;
 
   @Column({ type: 'int' })
