@@ -102,6 +102,10 @@ export class Job {
   @Column({ type: 'text', array: true, default: '{}' })
   tags: string[];
 
+  @Index()
+  @Column({ name: 'idempotency_key', type: 'varchar', length: 255, nullable: true })
+  idempotencyKey: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

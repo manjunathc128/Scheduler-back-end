@@ -47,11 +47,10 @@ export class AuthController {
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(
-    @Req() request: FastifyRequest,
+    @Body() body: { refreshToken: string; device?: string },
     @Res({ passthrough: true }) reply: FastifyReply,
   ) {
-    const refreshToken = request.cookies?.refresh_token!;
-    const device = (request.body as any)?.device || 'default';
+    const { refreshToken, device = 'default' } = body;
 
     const { accessToken } = await this.authService.refershToken(refreshToken, device);
 
@@ -89,10 +88,10 @@ export class AuthController {
     await this.authService.logoutAll(userId, accessToken);
 
     this.clearRefreshTokenCookie(reply);
-
+    console.log('here')
     return { message: 'Logged out from all devices' };
   }
-
+  
   private setRefreshTokenCookie(reply: FastifyReply, refreshToken: string): void {
     reply.setCookie('refresh_token', refreshToken, {
       httpOnly: true,
