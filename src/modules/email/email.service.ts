@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
+import { google } from 'googleapis';
 
 export interface SendEmailPayload {
   to: string;
@@ -13,43 +13,56 @@ export interface SendEmailPayload {
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
-  private readonly transporter: nodemailer.Transporter;
+  private readonly gmail;
   private readonly fromAddress: string;
 
   constructor(private readonly configService: ConfigService) {
-    const gmailUser = this.configService.get<string>('GMAIL_USER');
-    const gmailAppPassword = this.configService.get<string>('GMAIL_APP_PASSWORD');
+    const clientId = this.configService.get<string>('GMAIL_CLIENT_ID');
+    const clientSecret = this.configService.get<string>('GMAIL_CLIENT_SECRET');
+    const refreshToken = this.configService.get<string>('GMAIL_REFRESH_TOKEN');
+    this.fromAddress = this.configService.get<string>('GMAIL_USER') ?? '';
 
-    this.fromAddress = gmailUser ?? '';
+    const oauth2Client = new google.auth.OAuth2(clientId, clientSecret);
+    oauth2Client.setCredentials({ refresh_token: refreshToken });
 
-    // Gmail SMTP transporter — sends to any email address, no domain required
-    this.transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: gmailUser,
-        pass: gmailAppPassword,
-      },
-    });
+    this.gmail = google.gmail({ version: 'v1', auth: oauth2Client });
   }
 
   /**
-   * Send an email via Gmail SMTP.
-   * Supports default template or future template system.
+   * Send an email via Gmail API (HTTPS, port 443 — works on Render free tier).
    */
   async sendEmail(payload: SendEmailPayload): Promise<{ id: string }> {
     const html = payload.templateId
       ? this.renderTemplate(payload.templateId, payload.variables || {})
       : this.renderDefaultTemplate(payload.subject, payload.body);
 
-    const info = await this.transporter.sendMail({
-      from: `"Job Scheduler" <${this.fromAddress}>`,
-      to: payload.to,
-      subject: payload.subject,
+    // Build RFC 2822 email message
+    const messageParts = [
+      `From: "Job Scheduler" <${this.fromAddress}>`,
+      `To: ${payload.to}`,
+      `Subject: ${payload.subject}`,
+      'MIME-Version: 1.0',
+      'Content-Type: text/html; charset=utf-8',
+      '',
       html,
+    ];
+    const rawMessage = messageParts.join('\r\n');
+
+    // Base64url encode the message
+    const encodedMessage = Buffer.from(rawMessage)
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '');
+
+    const response = await this.gmail.users.messages.send({
+      userId: 'me',
+      requestBody: { raw: encodedMessage },
     });
 
-    this.logger.log(`Email sent to ${payload.to} (messageId: ${info.messageId})`);
-    return { id: info.messageId };
+    const messageId = response.data.id || 'unknown';
+    this.logger.log(`Email sent to ${payload.to} (messageId: ${messageId})`);
+    return { id: messageId };
   }
 
   /**

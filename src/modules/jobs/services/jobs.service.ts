@@ -470,6 +470,11 @@ export class JobsService {
     errorMessage: string,
     durationMs: number,
   ): Promise<ExecutionResult> {
+    // Guard: if retries exhausted, fail permanently instead of retrying
+    if (job.retryCount >= job.maxRetries) {
+      return this.markJobFailed(job, workerId, errorMessage, durationMs);
+    }
+
     // Algorithm 4: Calculate retry delay
     const delay = this.calculateRetryDelay(job.retryCount, job.retryPolicy);
 
@@ -769,7 +774,9 @@ export class JobsService {
     agingBoost: number,
     fairnessAdjustment: number,
   ): number {
-    return Math.min(100, Math.max(0, basePriority + agingBoost + fairnessAdjustment));
+    const result = (basePriority || 0) + (agingBoost || 0) + (fairnessAdjustment || 0);
+    if (isNaN(result)) return 0;
+    return Math.min(100, Math.max(0, result));
   }
 
   /**
